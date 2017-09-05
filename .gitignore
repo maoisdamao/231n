@@ -1,4 +1,9 @@
 *.swp
 *.pyc
-*.env/*
+*/.env/*
 __pycache__/*
+*/collectSubmission*
+*/frameworkpython
+*/setup_googlecloud*
+*/start_ipython_osx*
+*/.ipynb_checkpoints*
