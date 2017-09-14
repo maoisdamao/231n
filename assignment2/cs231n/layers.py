@@ -106,13 +106,91 @@ def relu_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
+    #dx = np.array(dout, copy=True)
     dx = dout
-    dx[x<0] = 0
+    dx[x<=0] = 0
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return dx
 
+def heraffine_forward(x, w, b):
+    """
+    Computes the forward pass for an affine (fully-connected) layer.
+    The input x has shape (N, d_1, ..., d_k) and contains a minibatch of N
+    examples, where each example x[i] has shape (d_1, ..., d_k). We will
+    reshape each input into a vector of dimension D = d_1 * ... * d_k, and
+    then transform it to an output vector of dimension M.
+    Inputs:
+    - x: A numpy array containing input data, of shape (N, d_1, ..., d_k)
+    - w: A numpy array of weights, of shape (D, M)
+    - b: A numpy array of biases, of shape (M,)
+    Returns a tuple of:
+    - out: output, of shape (N, M)
+    - cache: (x, w, b)
+    """
+    # dimension
+    N = x.shape[0]
+    D = np.prod(x.shape[1:])
+    x2 = np.reshape(x, (N, D))
+    out = np.dot(x2, w) + b
+    cache = (x, w, b)
+
+    return out, cache
+
+
+def heraffine_backward(dout, cache):
+    """
+    Computes the backward pass for an affine layer.
+    Inputs:
+    - dout: Upstream derivative, of shape (N, M)
+    - cache: Tuple of:
+      - x: Input data, of shape (N, d_1, ... d_k)
+      - w: Weights, of shape (D, M)
+    Returns a tuple of:
+    - dx: Gradient with respect to x, of shape (N, d1, ..., d_k)
+    - dw: Gradient with respect to w, of shape (D, M)
+    - db: Gradient with respect to b, of shape (M,)
+    """
+    x, w, b = cache
+    dx = np.dot(dout, w.T).reshape(x.shape)
+    dw = np.dot(x.reshape(x.shape[0], np.prod(x.shape[1:])).T, dout)
+    db = np.sum(dout, axis=0)
+
+    return dx, dw, db
+
+
+def herrelu_forward(x):
+    """
+    Computes the forward pass for a layer of rectified linear units (ReLUs).
+    Input:
+    - x: Inputs, of any shape
+    Returns a tuple of:
+    - out: Output, of the same shape as x
+    - cache: x
+    """
+
+    out = np.maximum(0, x)
+    cache = x
+
+    return out, cache
+
+
+def herrelu_backward(dout, cache):
+    """
+    Computes the backward pass for a layer of rectified linear units (ReLUs).
+    Input:
+    - dout: Upstream derivatives, of any shape
+    - cache: Input x, of same shape as dout
+    Returns:
+    - dx: Gradient with respect to x
+    """
+
+    x = cache
+    dx = np.array(dout, copy=True)
+    dx[x <= 0] = 0
+
+    return dx
 
 def batchnorm_forward(x, gamma, beta, bn_param):
     """

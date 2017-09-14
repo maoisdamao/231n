@@ -160,6 +160,8 @@ class FullyConnectedNet(object):
         self.num_layers = 1 + len(hidden_dims)
         self.dtype = dtype
         self.params = {}
+        
+        self.L = self.num_layers
 
         ############################################################################
         # TODO: Initialize the parameters of the network, storing all values in    #
@@ -173,13 +175,12 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        layer_dims = hidden_dims + [num_classes]
-        last_layer_dim = input_dim
-        for i, layer_dim in enumerate(layer_dims):
-            self.params['W'+str(i+1)] = np.random.normal(0, weight_scale, (last_layer_dim, layer_dim))
-            self.params['b'+str(i+1)] = np.zeros((1, layer_dim))
-            last_layer_dim = layer_dim
-        ############################################################################
+        layer_dims = [input_dim] + hidden_dims + [num_classes]
+        for i in range(1, self.num_layers+1):
+            #self.params['W'+str(i+1)] = np.random.normal(0, weight_scale, (last_layer_dim, layer_dim))
+            W = weight_scale*np.random.randn(layer_dims[i-1], layer_dims[i])
+            b = np.zeros((1, layer_dims[i])) 
+            self.params.update({'W'+str(i): W, 'b'+str(i): b})                    ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
 
@@ -237,15 +238,20 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         L = self.num_layers
-        cache_layers = {}
-        layer_input = X
-        for i in range(1, L):
-            hidden_layer, cache_layers[str(i)] = affine_relu_forward(
-                    layer_input, self.params['W'+str(i)], self.params['b'+str(i)])
-            layer_input = hidden_layer
-        #print("layer input shape", layer_input.shape)
-        scores, cache_score = affine_forward(
-                layer_input, self.params['W'+str(L)], self.params['b'+str(L)])
+        hiddens = {}
+        cache_hiddens = {}
+        
+        hiddens['0'] = X
+        for i in range(1, L+1):
+            W, b = self.params['W'+str(i)], self.params['b'+str(i)]
+            h = hiddens[str(i-1)]
+            if i==L:
+                h, cache_h = affine_forward(h, W, b)
+            else:
+                h, cache_h = affine_relu_forward(h, W, b)
+            hiddens[str(i)] = h
+            cache_hiddens[str(i)] = cache_h
+        scores = hiddens[str(L)]
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -268,17 +274,22 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
+        data_loss, dscores = softmax_loss(scores, y)
         reg_loss = 0
-        for i in range(1, L+1):
-            reg_loss += 0.5*self.reg*np.sum(self.params['W'+str(i)]*self.params['W'+str(i)])
-        loss, dscores = softmax_loss(scores, y)
-        loss += reg_loss
-        dhidden, grads['W'+str(L)], grads['b'+str(L)] = affine_backward(dscores, cache_score)
-        grads['W'+str(L)] += self.reg*self.params['W'+str(L)]
-        for i in range(L-1, 0, -1):
-            dhidden, grads['W'+str(i)], grads['b'+str(i)] = affine_relu_backward(
-                        dhidden, cache_layers[str(i)])
-            grads['W'+str(i)] += self.reg*self.params['W'+str(i)]
+        for w in [self.params[k] for k in self.params.keys() if k.startswith('W')]:
+            reg_loss += 0.5*self.reg*np.sum(w*w)
+        loss = data_loss + reg_loss
+        dhiddens = {str(L): dscores}
+        for i in range(L, 0, -1):
+            dh = dhiddens[str(i)]
+            h_cache = cache_hiddens[str(i)]
+            if i==L:
+                dh, dW, db = affine_backward(dh, h_cache)
+            else:
+                dh, dW, db = affine_relu_backward(dh, h_cache)
+            dhiddens[str(i-1)] = dh
+            grads.update({'W'+str(i): dW + self.reg * self.params['W'+str(i)], 'b'+str(i): db})
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
